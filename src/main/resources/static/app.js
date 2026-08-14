@@ -20,6 +20,7 @@ const stato = {
   modificando: null,   // id alimento in modifica, null se nuovo
   fonteProposta: 'MANUALE',
   pastoAperto: null,   // id pasto aperto nel popup, null se chiuso
+  totaleAperto: false, // dettaglio del totale giornata aperto?
 };
 
 /* ---------------------------------------------------------------
@@ -152,8 +153,9 @@ $('btn-esci').addEventListener('click', async () => {
 /* ---------------------------------------------------------------
    Etichetta nutrizionale
    --------------------------------------------------------------- */
-function etichetta(titolo, sottotitolo, valori, totale) {
-  const righe = stato.nutrienti.map((n, i) => {
+/** Le sole righe della tabella nutrienti: riusate dall'etichetta e dal totale. */
+function righeNutrienti(valori) {
+  return stato.nutrienti.map((n, i) => {
     const precedente = stato.nutrienti[i - 1];
     const stacco = n.unita === 'mg' && precedente && precedente.unita !== 'mg';
     const v = valori ? valori[n.codice] : null;
@@ -170,14 +172,16 @@ function etichetta(titolo, sottotitolo, valori, totale) {
         <span class="unit">${assente ? '' : esc(n.unita)}</span>
       </td></tr>`;
   }).join('');
+}
 
+function etichetta(titolo, sottotitolo, valori, totale) {
   return `<div class="etichetta ${totale ? 'etichetta--totale' : ''}">
     <div class="etichetta-testa">
       <h3>${esc(titolo)}</h3>
       ${sottotitolo ? `<span class="etichetta-per">${esc(sottotitolo)}</span>` : ''}
     </div>
     <div class="barra"></div>
-    <table class="tab"><tbody>${righe}</tbody></table>
+    <table class="tab"><tbody>${righeNutrienti(valori)}</tbody></table>
   </div>`;
 }
 
@@ -205,8 +209,8 @@ function disegnaDispensa() {
         <span class="lista-nome">${esc(a.nome)}${a.marca ? ` <span class="lista-marca">${esc(a.marca)}</span>` : ''}</span>
         <span class="lista-kcal">${fmt(a.kcal, 'kcal')}<em>kcal/100g</em></span>
       </button>
-      <button class="mini" data-modifica="${a.id}">modifica</button>
-      <button class="mini mini--rosso" data-elimina="${a.id}">archivia</button>
+      <button class="azione-riga" data-modifica="${a.id}" aria-label="Modifica ${esc(a.nome)}" title="Modifica"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-modifica"></use></svg></button>
+      <button class="azione-riga azione-riga--rosso" data-elimina="${a.id}" aria-label="Archivia ${esc(a.nome)}" title="Archivia"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-cestino"></use></svg></button>
     </li>`).join('');
 }
 
@@ -219,8 +223,7 @@ $('lista-alimenti').addEventListener('click', async (e) => {
     stato.scelto = completo;
     stato.grammi = '100';
     disegnaDispensa();
-    disegnaBilancia();
-    $('in-grammi').focus();
+    apriBilancia();
   }
   if (b.dataset.modifica) {
     const completo = await api('GET', `/api/alimenti/${b.dataset.modifica}`);
@@ -229,7 +232,7 @@ $('lista-alimenti').addEventListener('click', async (e) => {
   if (b.dataset.elimina) {
     if (!confirm('Archiviare questo ingrediente? Le voci di diario già registrate restano.')) return;
     await api('DELETE', `/api/alimenti/${b.dataset.elimina}`);
-    if (stato.scelto?.id === Number(b.dataset.elimina)) { stato.scelto = null; disegnaBilancia(); }
+    if (stato.scelto?.id === Number(b.dataset.elimina)) chiudiBilancia();
     await caricaAlimenti($('in-cerca').value.trim());
   }
 });
@@ -254,33 +257,36 @@ function proporziona(per100, grammi) {
   return out;
 }
 
+/* La bilancia è un popup: si disegna solo quando c'è un ingrediente scelto. */
 function disegnaBilancia() {
-  const pannello = $('pannello-bilancia');
-  const attivo = !!stato.scelto;
+  if (!stato.scelto) return;
 
-  pannello.classList.toggle('bilancia--spenta', !attivo);
-  $('btn-cambia').hidden = !attivo;
-  $('bilancia-nome').textContent = attivo
-    ? stato.scelto.nome + (stato.scelto.stato !== 'CRUDO' ? ` · ${stato.scelto.stato.toLowerCase()}` : '')
-    : 'Scegli un ingrediente dalla dispensa';
+  $('bilancia-nome').textContent =
+    stato.scelto.nome + (stato.scelto.stato !== 'CRUDO' ? ` · ${stato.scelto.stato.toLowerCase()}` : '');
 
-  ['in-grammi', 'btn-meno', 'btn-piu'].forEach((id) => { $(id).disabled = !attivo; });
-  document.querySelectorAll('.chip').forEach((c) => { c.disabled = !attivo; });
+  ['in-grammi', 'btn-meno', 'btn-piu'].forEach((id) => { $(id).disabled = false; });
+  document.querySelectorAll('.chip').forEach((c) => { c.disabled = false; });
 
-  $('lcd-grammi').textContent = attivo ? fmt(num(stato.grammi), 'g') : '—';
+  $('lcd-grammi').textContent = fmt(num(stato.grammi), 'g');
   $('in-grammi').value = stato.grammi;
-
-  if (!attivo) {
-    $('anteprima').innerHTML = '';
-    $('destinazione').hidden = true;
-    return;
-  }
 
   const valori = proporziona(stato.scelto.per100, stato.grammi);
   $('anteprima').innerHTML = etichetta(
     stato.scelto.nome, `per ${fmt(num(stato.grammi), 'g')} g`, valori, false);
   $('destinazione').hidden = false;
   disegnaSegmentiPasto();
+}
+
+function apriBilancia() {
+  disegnaBilancia();
+  $('velo-bilancia').hidden = false;
+  $('in-grammi').focus();
+}
+
+function chiudiBilancia() {
+  $('velo-bilancia').hidden = true;
+  stato.scelto = null;
+  disegnaDispensa();
 }
 
 function disegnaSegmentiPasto() {
@@ -303,7 +309,9 @@ $('segmenti-pasto').addEventListener('click', (e) => {
   disegnaSegmentiPasto();
 });
 
-$('btn-cambia').addEventListener('click', () => { stato.scelto = null; disegnaDispensa(); disegnaBilancia(); });
+$('btn-chiudi-bilancia').addEventListener('click', chiudiBilancia);
+$('velo-bilancia').addEventListener('click', (e) => { if (e.target === $('velo-bilancia')) chiudiBilancia(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('velo-bilancia').hidden) chiudiBilancia(); });
 $('in-grammi').addEventListener('input', (e) => { stato.grammi = e.target.value; disegnaBilancia(); });
 $('btn-meno').addEventListener('click', () => { stato.grammi = String(Math.max(0, (num(stato.grammi) || 0) - 10)); disegnaBilancia(); });
 $('btn-piu').addEventListener('click', () => { stato.grammi = String((num(stato.grammi) || 0) + 10); disegnaBilancia(); });
@@ -325,8 +333,8 @@ $('btn-aggiungi').addEventListener('click', async () => {
     { alimentoId: stato.scelto.id, grammi: g });
   stato.scelto = null;
   stato.grammi = '100';
+  $('velo-bilancia').hidden = true;
   disegnaDispensa();
-  disegnaBilancia();
   await caricaDiario();
 });
 
@@ -362,7 +370,15 @@ function disegnaDiario() {
     <div class="pasti-griglia">${carte}</div>
     <button class="btn btn--largo" id="btn-spuntino">+ Aggiungi spuntino</button>
     <div class="scheda scheda--totale">
-      ${etichetta('Totale giornata', `${nVoci} ${nVoci === 1 ? 'voce' : 'voci'} in ${d.pasti.length} pasti`, d.totale, true)}
+      <button class="totale-testa" id="btn-totale" aria-expanded="${stato.totaleAperto}">
+        <span class="tt-testo">
+          <span class="tt-nome">Totale giornata</span>
+          <span class="tt-sub">${nVoci} ${nVoci === 1 ? 'voce' : 'voci'} in ${d.pasti.length} pasti</span>
+        </span>
+        <span class="tt-kcal">${fmt(d.totale?.kcal ?? 0, 'kcal')}<em>kcal</em></span>
+        <svg class="tt-chevron ${stato.totaleAperto ? 'su' : ''}" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+      </button>
+      ${stato.totaleAperto ? `<div class="barra"></div><table class="tab"><tbody>${righeNutrienti(d.totale)}</tbody></table>` : ''}
     </div>`;
 }
 
@@ -407,6 +423,7 @@ $('colonna-diario').addEventListener('click', async (e) => {
     await caricaDiario();
     return;
   }
+  if (b.id === 'btn-totale') { stato.totaleAperto = !stato.totaleAperto; disegnaDiario(); return; }
   if (b.dataset.pastoApri) apriPasto(Number(b.dataset.pastoApri));
 });
 
