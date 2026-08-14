@@ -12,7 +12,11 @@ COPY pom.xml .
 RUN mvn -B dependency:go-offline
 
 COPY src ./src
-RUN mvn -B clean package -DskipTests
+
+# -DskipTests non esegue i test ma li COMPILA lo stesso: basta un file
+# di test con una dipendenza mancante per far fallire il build di
+# produzione. -Dmaven.test.skip=true salta anche la compilazione.
+RUN mvn -B clean package -Dmaven.test.skip=true
 
 
 # ============================================================
@@ -34,15 +38,15 @@ FROM eclipse-temurin:25-jre
 WORKDIR /app
 
 # Non girare come root.
-RUN useradd --system --uid 1001 nutri
-USER nutri
+RUN useradd --system --uid 1001 app
+USER app
 
 # Ordine di volatilità crescente: le dipendenze prima, il tuo
 # codice per ultimo.
-COPY --from=strati --chown=nutri /estratto/dependencies/ ./
-COPY --from=strati --chown=nutri /estratto/spring-boot-loader/ ./
-COPY --from=strati --chown=nutri /estratto/snapshot-dependencies/ ./
-COPY --from=strati --chown=nutri /estratto/application/ ./
+COPY --from=strati --chown=app /estratto/dependencies/ ./
+COPY --from=strati --chown=app /estratto/spring-boot-loader/ ./
+COPY --from=strati --chown=app /estratto/snapshot-dependencies/ ./
+COPY --from=strati --chown=app /estratto/application/ ./
 
 # Render assegna la porta tramite la variabile PORT e ignora EXPOSE:
 # è application.yml a leggerla (server.port: ${PORT:8080}).

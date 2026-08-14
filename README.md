@@ -1,8 +1,18 @@
-# nutri — diario nutrizionale
+# diarionutrizionale
 
 Spring Boot 4.1 / Java 25 / PostgreSQL 18, frontend senza build step.
 Copre le fasi 0 e 1 del piano: schema, catalogo nutrienti, alimenti con
 versioning, diario, totali di pasto e di giornata.
+
+## Attenzione: una sola classe principale
+
+Se hai generato lo scheletro da Spring Initializr, hai già una classe annotata
+`@SpringBootApplication` nel package `pj.eu.diarionutrizionale`. Tienine **una
+sola**: due classi con quell'annotazione nello stesso progetto fanno fallire
+l'avvio con `Unable to find a single main class`.
+
+Se la tua si chiama diversamente da `DiarioNutrizionaleApplication`, cancella
+la mia e tieni la tua — il nome non conta, conta che ce ne sia una.
 
 ## Avvio
 
@@ -180,6 +190,13 @@ prima richiesta dopo il risveglio paga il tempo di avvio della JVM: parliamo
 di quasi un minuto. Sommato al fatto che anche Supabase si sospende dopo una
 settimana, l'apertura del lunedì mattina può essere lenta.
 
+**I test non vengono compilati.** Il `Dockerfile` usa `-Dmaven.test.skip=true`
+e non `-DskipTests`: il secondo salta l'esecuzione ma compila comunque i
+sorgenti di test, quindi un file di test con una dipendenza mancante fa
+fallire il build di produzione. Se Spring Initializr ti ha lasciato un
+`TestcontainersConfiguration.java` e non hai le relative dipendenze,
+cancellalo o aggiungile (vedi la sezione Test).
+
 **Il build è più lento la prima volta.** Il `Dockerfile` è in tre stadi:
 compila, estrae il JAR in strati, e monta l'immagine finale con le dipendenze
 prima e il tuo codice per ultimo. Così il rebuild dopo una modifica al codice
@@ -192,7 +209,7 @@ Render sa costruire progetti Java anche da solo, e per un'applicazione così
 
 ```
 Build Command:  mvn clean package -DskipTests
-Start Command:  java -jar target/nutri-0.1.0.jar
+Start Command:  java -jar target/diarionutrizionale-0.0.1-SNAPSHOT.jar
 ```
 
 Meno controllo sull'immagine, ma un file in meno da mantenere.
@@ -289,7 +306,7 @@ usata negli indici: vedi la nota nel piano sulla sua non-immutabilità.
 ## Struttura
 
 ```
-src/main/java/it/elia/nutri/
+src/main/java/pj/eu/diarionutrizionale/
   comune/      sicurezza, sessione, registrazione su invito, errori RFC 9457
   nutriente/   catalogo: ordine, unità, gerarchia, fattori Atwater
   alimento/    CRUD con versioning immutabile + validazione energetica

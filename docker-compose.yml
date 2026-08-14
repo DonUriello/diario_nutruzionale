@@ -1,7 +1,7 @@
 services:
   db:
     image: postgres:18
-    container_name: nutri-db
+    container_name: diario-db
     environment:
       POSTGRES_USER: nutri
       POSTGRES_PASSWORD: dev
@@ -10,7 +10,7 @@ services:
       # 5433 sull'host: lascia libera la 5432 a un Postgres nativo.
       - "5433:5432"
     volumes:
-      - nutri-data:/var/lib/postgresql/data
+      - diario-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U nutri -d nutri"]
       interval: 5s
@@ -18,4 +18,4 @@ services:
       retries: 10
 
 volumes:
-  nutri-data:
+  diario-data:

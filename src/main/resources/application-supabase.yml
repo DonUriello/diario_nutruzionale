@@ -1,0 +1,56 @@
+# Profilo Supabase.  Avvio:  ./mvnw spring-boot:run -Dspring-boot.run.profiles=supabase
+#
+# ATTENZIONE ALLA PORTA.  Supabase espone tre stringhe di connessione e
+# solo due vanno bene per un'applicazione Spring Boot:
+#
+#   6543  Supavisor in transaction mode   -> NON USARE.
+#         Non supporta le prepared statement, che il driver JDBC crea da solo,
+#         e non supporta gli advisory lock di sessione, che Flyway usa per il
+#         lock delle migrazioni. Fallisce in due modi diversi.
+#
+#   5432  Supavisor in session mode       -> QUESTA.  (host: *.pooler.supabase.com)
+#         Prepared statement supportate, compatibile IPv4, con coda se il
+#         pool è pieno. È il caso "backend persistente" della documentazione.
+#
+#   5432  connessione diretta             -> ok, ma solo su IPv6
+#         (host: db.*.supabase.co) a meno di comprare l'add-on IPv4.
+#
+# La stringa la trovi nel cruscotto Supabase, bottone "Connect".
+# L'utente in session mode ha la forma  postgres.<project-ref>
+
+spring:
+  datasource:
+    url: ${SUPABASE_URL}
+    username: ${SUPABASE_USER}
+    password: ${SUPABASE_PASSWORD}
+    hikari:
+      # Il piano gratuito ha poche connessioni dirette: tenere il pool stretto.
+      maximum-pool-size: 5
+      minimum-idle: 1
+      # Chiude le connessioni inattive invece di tenerle aperte a vuoto.
+      idle-timeout: 60000
+      max-lifetime: 1200000
+      connection-timeout: 20000
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    # Su Supabase le estensioni stanno nello schema "extensions", già nel
+    # search_path del ruolo postgres. Se una migrazione non trovasse
+    # gin_trgm_ops, togli il commento qui sotto.
+    # init-sqls: "SET search_path TO public, extensions"
+
+server:
+  servlet:
+    session:
+      cookie:
+        # Su Render il traffico è HTTPS: il cookie di sessione
+        # non deve viaggiare in chiaro.
+        secure: true
+  # Render sta davanti come reverse proxy: senza questo, Spring
+  # crede di essere in HTTP e sbaglia gli URL assoluti.
+  forward-headers-strategy: native
+
+logging:
+  level:
+    pj.eu.diarionutrizionale: INFO

@@ -12,11 +12,11 @@
         <relativePath/>
     </parent>
 
-    <groupId>it.elia</groupId>
-    <artifactId>nutri</artifactId>
-    <version>0.1.0</version>
+    <groupId>pj.eu</groupId>
+    <artifactId>diarionutrizionale</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
-    <name>nutri</name>
+    <name>diarionutrizionale</name>
     <description>Diario nutrizionale</description>
 
     <properties>

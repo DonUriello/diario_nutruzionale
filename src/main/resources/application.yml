@@ -1,12 +1,12 @@
 spring:
   application:
-    name: nutri
+    name: diarionutrizionale
 
   # Predefinito: Postgres locale in Docker.
   # Per Supabase:  -Dspring-boot.run.profiles=supabase
   datasource:
     url: jdbc:postgresql://localhost:5433/nutri
-    username: nutri
+    username: diarionutrizionale
     password: dev
   flyway:
     enabled: true
@@ -40,4 +40,4 @@ management:
 
 logging:
   level:
-    it.elia.nutri: DEBUG
+    pj.eu.diarionutrizionale: DEBUG
