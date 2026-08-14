@@ -256,10 +256,14 @@ giallo e ti dice quanti campi restano da compilare a mano.
 In `application.yml`:
 
 ```yaml
-off:
+openfoodfacts:
   base-url: https://world.openfoodfacts.org
-  user-agent: DiarioNutrizionale/0.1 (uso personale)
+  user-agent: "DiarioNutrizionale/0.1 (uso personale)"
 ```
+
+Il prefisso non è `off` di proposito: in YAML `off` è una delle parole
+riservate ai booleani (come `yes`, `no`, `on`), quindi diventerebbe la chiave
+`false` e il segnaposto non si risolverebbe.
 
 Lo `User-Agent` è una loro condizione d'uso: chiedono di identificare
 l'applicazione, nella forma `NomeApp/Versione (contatto)`. Mettici un

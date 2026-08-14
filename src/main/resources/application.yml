@@ -23,9 +23,9 @@ spring:
 
 # Open Food Facts: lettura senza chiave API. Chiedono un User-Agent che
 # identifichi l'applicazione, nella forma NomeApp/Versione (contatto).
-off:
+openfoodfacts:
   base-url: https://world.openfoodfacts.org
-  user-agent: DiarioNutrizionale/0.1 (uso personale)
+  user-agent: "DiarioNutrizionale/0.1 (uso personale)"
 
 server:
   # In locale 8080. Su Render (e su quasi ogni PaaS) la porta la

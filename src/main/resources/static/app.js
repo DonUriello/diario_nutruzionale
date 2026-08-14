@@ -536,17 +536,22 @@ function statoOff(testo, tipo) {
 
 async function cercaOff() {
   const q = $('f-cerca-off').value.trim();
-  if (q.length < 2) return;
+  if (q.length < 2) {
+    statoOff('Scrivi almeno due caratteri, o un codice a barre.', 'attenzione');
+    return;
+  }
 
+  const bottone = $('btn-cerca-off');
+  bottone.disabled = true;
+  bottone.textContent = 'Cerco…';
   $('risultati-off').innerHTML = '';
-  statoOff('Cerco…');
+  statoOff(null);
 
   try {
     if (sembraEan(q)) {
       // Codice a barre: un solo risultato, lo applico subito.
       const p = await api('GET', `/api/lookup/ean/${encodeURIComponent(q)}`);
       applicaProdotto(p);
-      statoOff(null);
       return;
     }
     const trovati = await api('GET', `/api/lookup/nome?q=${encodeURIComponent(q)}`);
@@ -554,10 +559,14 @@ async function cercaOff() {
       statoOff('Nessun prodotto trovato. Prova con un nome diverso, o compila i campi a mano.', 'attenzione');
       return;
     }
-    statoOff(null);
+    statoOff(`${trovati.length} risultat${trovati.length === 1 ? 'o' : 'i'}. Scegline uno per compilare i campi.`);
     disegnaRisultatiOff(trovati);
   } catch (e) {
-    statoOff(e.message, 'male');
+    console.error('ricerca Open Food Facts:', e);
+    statoOff('Ricerca non riuscita: ' + e.message, 'male');
+  } finally {
+    bottone.disabled = false;
+    bottone.textContent = 'Cerca';
   }
 }
 
