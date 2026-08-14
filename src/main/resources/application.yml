@@ -22,7 +22,9 @@ spring:
     default-property-inclusion: non_null
 
 server:
-  port: 8080
+  # In locale 8080. Su Render (e su quasi ogni PaaS) la porta la
+  # assegna la piattaforma tramite la variabile PORT.
+  port: ${PORT:8080}
   servlet:
     session:
       cookie:

@@ -66,6 +66,42 @@ export $(cat .env | xargs)
 
 Flyway crea lo schema al primo avvio, come in locale.
 
+### Schema a mano invece che con Flyway
+
+`supabase-schema.sql` è il consolidamento di V001, V002 e V003 in un file
+solo, da incollare nel SQL Editor di Supabase. Non è necessario — Flyway fa
+lo stesso lavoro all'avvio — ma serve se preferisci vedere e creare lo schema
+prima di collegare l'applicazione.
+
+Se lo esegui a mano, aggiungi al profilo supabase:
+
+```yaml
+spring:
+  flyway:
+    baseline-on-migrate: true
+    baseline-version: 3
+```
+
+Altrimenti Flyway trova le tabelle già lì e si ferma.
+
+### Chiudi le tabelle verso PostgREST
+
+Supabase espone via API REST tutto lo schema `public`, e concede i privilegi
+ai ruoli `anon` e `authenticated`. La chiave `anon` è pubblica: senza
+intervento, chi la conosce può leggere e scrivere il diario scavalcando il
+backend Java. `supabase-schema.sql` chiude tutto in fondo al file; se invece
+hai lasciato fare a Flyway, esegui quel blocco a mano una volta:
+
+```sql
+ALTER TABLE alimento ENABLE ROW LEVEL SECURITY;   -- e così per ogni tabella
+REVOKE ALL ON ALL TABLES    IN SCHEMA public FROM anon, authenticated;
+REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM anon, authenticated;
+```
+
+RLS attiva e nessuna policy significa: niente passa dall'API, mentre
+l'applicazione continua a funzionare perché si collega come proprietaria
+delle tabelle e la RLS non la tocca.
+
 ### Cose da sapere
 
 **Le estensioni ci sono già.** Supabase pre-installa `pg_trgm` e `unaccent`
@@ -96,6 +132,70 @@ pg_dump "postgresql://postgres.<ref>:<password>@<host>:5432/postgres" \
 Francoforte sono decine. Il diario fa poche query per schermata, quindi non
 si nota; ma è la ragione per cui il pool è configurato a 5 connessioni e non
 a 50, e per cui conviene scegliere la regione europea più vicina.
+
+
+## Esercizio su Render
+
+L'errore `failed to read dockerfile` significa che Render costruisce con
+Docker ma non trova il `Dockerfile`. Ora c'è, nella radice del progetto.
+
+**Se il repository ha il progetto in una sottocartella**, indicala in Render:
+Settings → Root Directory. Il `Dockerfile` deve stare lì dentro, non sopra.
+
+### Configurazione
+
+| Voce | Valore |
+|---|---|
+| Runtime | Docker |
+| Region | Frankfurt |
+| Health Check Path | `/actuator/health` |
+
+Variabili d'ambiente (Settings → Environment):
+
+```
+SPRING_PROFILES_ACTIVE = supabase
+SUPABASE_URL           = jdbc:postgresql://aws-1-eu-west-3.pooler.supabase.com:5432/postgres?sslmode=require
+SUPABASE_USER          = postgres.<project-ref>
+SUPABASE_PASSWORD      = <la tua>
+```
+
+C'è anche `render.yaml` se preferisci il blueprint. Le credenziali restano
+comunque da inserire a mano: `sync: false` serve proprio a tenerle fuori dal
+repository.
+
+### Cose che cambiano rispetto al locale
+
+**La porta la assegna Render.** `application.yml` legge `${PORT:8080}`:
+in locale resta 8080, in esercizio ascolta dove gli dicono. Un'applicazione
+che ignora `PORT` viene dichiarata morta dopo qualche minuto di health check
+falliti, con un messaggio che parla di porte e non di configurazione.
+
+**Il cookie diventa Secure.** Il profilo `supabase` attiva
+`server.servlet.session.cookie.secure` e `forward-headers-strategy: native`.
+Il secondo serve perché Render termina TLS davanti: senza, Spring crede di
+essere in HTTP e sbaglia gli URL assoluti e i redirect.
+
+**Il piano gratuito si addormenta** dopo un quarto d'ora di inattività, e la
+prima richiesta dopo il risveglio paga il tempo di avvio della JVM: parliamo
+di quasi un minuto. Sommato al fatto che anche Supabase si sospende dopo una
+settimana, l'apertura del lunedì mattina può essere lenta.
+
+**Il build è più lento la prima volta.** Il `Dockerfile` è in tre stadi:
+compila, estrae il JAR in strati, e monta l'immagine finale con le dipendenze
+prima e il tuo codice per ultimo. Così il rebuild dopo una modifica al codice
+ricostruisce qualche centinaio di kilobyte invece di tutto.
+
+### Se preferisci senza Docker
+
+Render sa costruire progetti Java anche da solo, e per un'applicazione così
+è del tutto ragionevole. Runtime Java, poi:
+
+```
+Build Command:  mvn clean package -DskipTests
+Start Command:  java -jar target/nutri-0.1.0.jar
+```
+
+Meno controllo sull'immagine, ma un file in meno da mantenere.
 
 ## Account
 
@@ -186,6 +286,9 @@ src/main/java/it/elia/nutri/
   nutriente/   catalogo: ordine, unità, gerarchia, fattori Atwater
   alimento/    CRUD con versioning immutabile + validazione energetica
   diario/      pasti, voci, proporzione e totali
+Dockerfile                   immagine per Render (3 stadi, con layering)
+render.yaml                  blueprint Render (facoltativo)
+supabase-schema.sql          schema consolidato per il SQL Editor
 src/main/resources/
   application.yml            profilo locale (Docker)
   application-supabase.yml   profilo Supabase

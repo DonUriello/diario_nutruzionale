@@ -1,0 +1,21 @@
+# Blueprint Render. Facoltativo: puoi anche configurare tutto dal cruscotto.
+# I valori con sync:false non stanno qui: si inseriscono a mano
+# nel cruscotto, così le credenziali non finiscono nel repository.
+
+services:
+  - type: web
+    name: nutri
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    region: frankfurt
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: supabase
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_USER
+        sync: false
+      - key: SUPABASE_PASSWORD
+        sync: false
