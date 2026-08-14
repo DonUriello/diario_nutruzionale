@@ -214,6 +214,16 @@ input, select { font-family: inherit; }
 .x { background: none; border: 0; font-size: 22px; line-height: 1; color: var(--muted); padding: 4px 8px; border-radius: 8px; }
 .x:hover { color: var(--rosso); background: var(--rosso-weak); }
 .x--piccolo { font-size: 18px; }
+
+/* iconcine azione nell'elenco ingredienti (modifica / archivia) */
+.azione-riga {
+  flex: none; width: 34px; height: 34px; border: 0; background: transparent;
+  border-radius: 10px; display: grid; place-items: center; color: var(--muted);
+  transition: background .12s, color .12s;
+}
+.azione-riga svg { width: 18px; height: 18px; }
+.azione-riga:hover { background: var(--accent-weak); color: var(--accent); }
+.azione-riga--rosso:hover { background: var(--rosso-weak); color: var(--rosso); }
 .azioni { display: flex; gap: 10px; margin-top: 16px; }
 .azioni .btn { flex: 1; }
 
@@ -305,6 +315,20 @@ input, select { font-family: inherit; }
   color: var(--accent);
 }
 .scheda--totale { border-top: 3px solid var(--accent); }
+.totale-testa {
+  width: 100%; border: 0; background: transparent; cursor: pointer;
+  display: flex; align-items: center; gap: 12px; padding: 2px; text-align: left;
+}
+.tt-testo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tt-nome { font-size: 16px; font-weight: 800; letter-spacing: -.01em; }
+.tt-sub { font-size: 12px; color: var(--muted); font-weight: 500; }
+.tt-kcal { font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tt-kcal em { font-style: normal; font-size: 11px; font-weight: 600; color: var(--muted); margin-left: 3px; }
+.tt-chevron {
+  width: 20px; height: 20px; flex: none; fill: none; stroke: var(--faint);
+  stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; transition: transform .15s ease;
+}
+.tt-chevron.su { transform: rotate(180deg); }
 
 /* ---------- card compatte dei pasti ---------- */
 .pasti-testa { padding: 0 4px; }
@@ -357,6 +381,15 @@ input, select { font-family: inherit; }
   box-shadow: 0 30px 70px rgba(40,38,70,.30);
 }
 .modale-testa { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+
+/* Popup responsivi: su schermi piccoli meno respiro, così non “saltano”. */
+@media (max-width: 400px) {
+  .velo { padding: 12px 10px; }
+  .modale { padding: 18px; border-radius: 22px; }
+}
+/* La bilancia in popup: l'anteprima non deve far ballare la finestra. */
+.modale.bilancia .bilancia-nome { margin-top: 4px; }
+.modale.bilancia #anteprima:empty { display: none; }
 
 .campo-nutriente {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;

@@ -21,6 +21,8 @@
   <symbol id="ic-sodio" viewBox="0 0 24 24"><g><path fill="currentColor" d="M8.4 8h7.2l.8 10.6a1.2 1.2 0 0 1-1.2 1.3H8.8a1.2 1.2 0 0 1-1.2-1.3z"/><path fill="none" stroke="currentColor" stroke-width="1.6" d="M9.6 8V6.6a2.4 2.4 0 0 1 4.8 0V8"/><g fill="#fff"><circle cx="10.6" cy="11" r=".7"/><circle cx="13.4" cy="11" r=".7"/><circle cx="12" cy="12.6" r=".7"/></g></g></symbol>
   <symbol id="ic-calcio" viewBox="0 0 24 24"><g><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M8.8 9.4l6.4 6.4"/><g fill="currentColor"><circle cx="7.7" cy="8.6" r="1.7"/><circle cx="9.4" cy="10.3" r="1.7"/><circle cx="16.3" cy="15.4" r="1.7"/><circle cx="14.6" cy="13.7" r="1.7"/></g></g></symbol>
   <symbol id="ic-ferro" viewBox="0 0 24 24"><g><path fill="none" stroke="currentColor" stroke-width="2.1" d="M7 5v6a5 5 0 0 0 10 0V5"/><g fill="currentColor"><rect x="5.6" y="3.6" width="2.8" height="3.2" rx=".6"/><rect x="15.6" y="3.6" width="2.8" height="3.2" rx=".6"/></g></g></symbol>
+  <symbol id="ic-modifica" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 16z"/><path d="M14.5 6.5l3 3"/></g></symbol>
+  <symbol id="ic-cestino" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12"/><path d="M10 11v6M14 11v6"/></g></symbol>
 </svg>
 
 <!-- Accesso -->
@@ -95,40 +97,6 @@
 
         <ul class="lista" id="lista-alimenti"></ul>
         <button id="btn-nuovo" class="btn btn--largo">+ Nuovo ingrediente</button>
-      </div>
-
-      <!-- Bilancia -->
-      <div class="scheda bilancia bilancia--spenta" id="pannello-bilancia">
-        <div class="scheda-testa">
-          <span class="eyebrow">Bilancia</span>
-          <button class="mini" id="btn-cambia" hidden>cambia</button>
-        </div>
-
-        <p class="bilancia-nome" id="bilancia-nome">Scegli un ingrediente dalla dispensa</p>
-
-        <div class="lcd">
-          <div class="lcd-cifre">
-            <span class="lcd-ombra">888,8</span>
-            <span class="lcd-vero" id="lcd-grammi">—</span>
-          </div>
-          <span class="lcd-unita">g</span>
-        </div>
-
-        <div class="peso-riga">
-          <button class="passo" id="btn-meno" disabled>−10</button>
-          <input id="in-grammi" class="peso-input" inputmode="decimal" value="100" disabled aria-label="Grammi">
-          <button class="passo" id="btn-piu" disabled>+10</button>
-        </div>
-
-        <div class="chip-riga" id="chip-grammi"></div>
-
-        <div id="anteprima"></div>
-
-        <div id="destinazione" hidden>
-          <span class="eyebrow">Aggiungi a</span>
-          <div class="segmenti" id="segmenti-pasto"></div>
-          <button id="btn-aggiungi" class="btn btn--primario btn--largo">Aggiungi al pasto</button>
-        </div>
       </div>
     </section>
 
@@ -210,6 +178,42 @@
       <button class="x" id="btn-chiudi-pasto" aria-label="Chiudi">×</button>
     </div>
     <div id="modale-pasto-corpo"></div>
+  </div>
+</div>
+
+<!-- Popup bilancia -->
+<div class="velo" id="velo-bilancia" hidden>
+  <div class="modale bilancia" id="pannello-bilancia" role="dialog" aria-modal="true" aria-labelledby="bilancia-nome">
+    <div class="modale-testa">
+      <span class="eyebrow">Bilancia</span>
+      <button class="x" id="btn-chiudi-bilancia" aria-label="Chiudi">×</button>
+    </div>
+
+    <p class="bilancia-nome" id="bilancia-nome">Scegli un ingrediente dalla dispensa</p>
+
+    <div class="lcd">
+      <div class="lcd-cifre">
+        <span class="lcd-ombra">888,8</span>
+        <span class="lcd-vero" id="lcd-grammi">—</span>
+      </div>
+      <span class="lcd-unita">g</span>
+    </div>
+
+    <div class="peso-riga">
+      <button class="passo" id="btn-meno" disabled>−10</button>
+      <input id="in-grammi" class="peso-input" inputmode="decimal" value="100" disabled aria-label="Grammi">
+      <button class="passo" id="btn-piu" disabled>+10</button>
+    </div>
+
+    <div class="chip-riga" id="chip-grammi"></div>
+
+    <div id="anteprima"></div>
+
+    <div id="destinazione" hidden>
+      <span class="eyebrow">Aggiungi a</span>
+      <div class="segmenti" id="segmenti-pasto"></div>
+      <button id="btn-aggiungi" class="btn btn--primario btn--largo">Aggiungi al pasto</button>
+    </div>
   </div>
 </div>
 
