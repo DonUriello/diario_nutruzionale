@@ -34,6 +34,69 @@ Nei log deve comparire `Successfully applied 3 migrations`.
 
 Poi apri **http://localhost:8080**.
 
+
+## Database su Supabase
+
+Il profilo `supabase` sostituisce il Postgres locale. Il codice non cambia:
+è sempre Postgres, quindi migrazioni, `jsonb` e `pg_trgm` funzionano uguale.
+
+**1. Prendi la stringa giusta.** Nel cruscotto Supabase, bottone *Connect*.
+Ti mostra tre opzioni e per Spring Boot **serve la Session pooler**:
+
+| Cosa | Porta | Va bene? |
+|---|---|---|
+| Transaction pooler | 6543 | **No.** Niente prepared statement, niente advisory lock |
+| Session pooler | 5432 | **Sì.** È questa |
+| Connessione diretta | 5432 | Solo se hai IPv6 |
+
+La 6543 è la trappola: è quella che Supabase mette per prima ed è pensata per
+funzioni serverless. Con JDBC fallisce due volte — il driver crea prepared
+statement da solo, e Flyway prende un advisory lock di sessione per le migrazioni.
+Nessuna delle due cose sopravvive al transaction mode.
+
+**2. Configura le variabili.** Copia `.env.esempio` in `.env` e riempilo.
+L'utente in session mode ha la forma `postgres.<project-ref>`, non `postgres`.
+
+**3. Avvia.**
+
+```
+export $(cat .env | xargs)
+./mvnw spring-boot:run -Dspring-boot.run.profiles=supabase
+```
+
+Flyway crea lo schema al primo avvio, come in locale.
+
+### Cose da sapere
+
+**Le estensioni ci sono già.** Supabase pre-installa `pg_trgm` e `unaccent`
+nello schema `extensions`, che è nel `search_path` del ruolo `postgres`.
+Le `CREATE EXTENSION IF NOT EXISTS` di `V001` diventano quindi no-op. Se
+l'indice trigram non trovasse `gin_trgm_ops`, togli il commento a `init-sqls`
+in `application-supabase.yml`.
+
+**Non serve niente altro di Supabase.** L'app parla Postgres e basta: PostgREST,
+Auth, Storage e Realtime restano spenti. Di conseguenza la chiave `anon` non
+serve e non va messa da nessuna parte, e RLS non entra in gioco perché nessuno
+raggiunge le tabelle se non attraverso questo backend.
+
+**Il piano gratuito si sospende** dopo circa una settimana di inattività, e va
+riattivato a mano dal cruscotto. Con un diario usato ogni giorno non capita,
+ma se andate in vacanza due settimane lo trovate spento.
+
+**Il backup resta tuo.** 500 MB bastano per anni di diario, ma un piano gratuito
+non è un posto dove tenere l'unica copia. Un `pg_dump` periodico verso il tuo
+disco vale più di qualunque garanzia:
+
+```
+pg_dump "postgresql://postgres.<ref>:<password>@<host>:5432/postgres" \
+  --no-owner --no-privileges -Fc -f nutri-$(date +%F).dump
+```
+
+**La latenza cambia.** In locale una query è mezzo millisecondo, verso
+Francoforte sono decine. Il diario fa poche query per schermata, quindi non
+si nota; ma è la ragione per cui il pool è configurato a 5 connessioni e non
+a 50, e per cui conviene scegliere la regione europea più vicina.
+
 ## Account
 
 La registrazione è **su invito**: un diario alimentare non ha motivo di
@@ -123,6 +186,9 @@ src/main/java/it/elia/nutri/
   nutriente/   catalogo: ordine, unità, gerarchia, fattori Atwater
   alimento/    CRUD con versioning immutabile + validazione energetica
   diario/      pasti, voci, proporzione e totali
+src/main/resources/
+  application.yml            profilo locale (Docker)
+  application-supabase.yml   profilo Supabase
 src/main/resources/static/
   index.html   struttura
   app.css      stile

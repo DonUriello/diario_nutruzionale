@@ -1,6 +1,9 @@
 spring:
   application:
     name: nutri
+
+  # Predefinito: Postgres locale in Docker.
+  # Per Supabase:  -Dspring-boot.run.profiles=supabase
   datasource:
     url: jdbc:postgresql://localhost:5433/nutri
     username: nutri
