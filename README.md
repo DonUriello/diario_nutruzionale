@@ -200,10 +200,18 @@ fallire il build di produzione. Se Spring Initializr ti ha lasciato un
 `TestcontainersConfiguration.java` e non hai le relative dipendenze,
 cancellalo o aggiungile (vedi la sezione Test).
 
-**Il build è più lento la prima volta.** Il `Dockerfile` è in tre stadi:
-compila, estrae il JAR in strati, e monta l'immagine finale con le dipendenze
-prima e il tuo codice per ultimo. Così il rebuild dopo una modifica al codice
-ricostruisce qualche centinaio di kilobyte invece di tutto.
+**Il build è più lento la prima volta.** Il `Dockerfile` è in due stadi:
+compila con Maven, poi copia il JAR su un'immagine con la sola JRE. La cache
+sul `pom.xml` fa sì che le ricompilazioni successive non riscarichino le
+dipendenze.
+
+Volendo si può suddividere il JAR in strati, così un rebuild dopo una modifica
+al codice ricostruisce qualche centinaio di kilobyte invece dell'immagine
+intera. Non è nel `Dockerfile` perché la sintassi di `jarmode` è cambiata fra
+le versioni di Spring Boot ed è facile sbagliarla; se la vuoi, parti dalla
+documentazione corrente di Spring Boot sulle immagini Docker, sezione
+"Layering Docker Images". Per un progetto che ridistribuisci ogni tanto il
+guadagno è modesto.
 
 ### Se preferisci senza Docker
 
