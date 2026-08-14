@@ -1,7 +1,5 @@
 package it.elia.nutri.diario;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import it.elia.nutri.comune.GestoreErrori.NonTrovato;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -11,25 +9,30 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 @Repository
 public class DiarioRepository {
 
-    private static final BigDecimal CENTO = new BigDecimal("100");
-
     private final JdbcClient jdbc;
-    private final ObjectMapper json;
 
-    public DiarioRepository(JdbcClient jdbc, ObjectMapper json) {
+    public DiarioRepository(JdbcClient jdbc) {
         this.jdbc = jdbc;
-        this.json = json;
     }
 
     private record RigaPasto(long id, String tipo, String nome, short ordine) {}
 
-    private record RigaVoce(long id, long pastoId, long alimentoId, int versione,
-                            String nome, BigDecimal grammi, String valori) {}
+    /**
+     * Una riga per ogni coppia (voce, nutriente): il jsonb viene esploso da
+     * Postgres con jsonb_each_text e la proporzione sui grammi è già fatta
+     * nella query. Il raggruppamento avviene qui, sull'ordine del catalogo.
+     */
+    private record RigaValore(long voceId, long pastoId, long alimentoId, int versione,
+                              String nome, BigDecimal grammi,
+                              String chiave, BigDecimal valore) {}
 
     public Diario giorno(long utente, LocalDate data) {
         List<RigaPasto> pasti = jdbc.sql("""
@@ -45,19 +48,43 @@ public class DiarioRepository {
             .param("u", utente).param("g", data)
             .query(RigaPasto.class).list();
 
-        List<RigaVoce> voci = pasti.isEmpty() ? List.of() : jdbc.sql("""
-                SELECT vp.id, vp.pasto_id, vp.alimento_id, vp.versione,
-                       av.nome, vp.grammi, av.valori::text AS valori
+        // LEFT JOIN LATERAL: una voce con valori vuoti resta comunque nella lista.
+        List<RigaValore> righe = pasti.isEmpty() ? List.of() : jdbc.sql("""
+                SELECT vp.id            AS voce_id,
+                       vp.pasto_id      AS pasto_id,
+                       vp.alimento_id   AS alimento_id,
+                       vp.versione      AS versione,
+                       av.nome          AS nome,
+                       vp.grammi        AS grammi,
+                       v.chiave         AS chiave,
+                       round(nullif(v.valore, 'null')::numeric * vp.grammi / 100, 3) AS valore
                 FROM   voce_pasto vp
                 JOIN   pasto p ON p.id = vp.pasto_id
                 JOIN   alimento_versione av
                        ON av.alimento_id = vp.alimento_id
                       AND av.versione    = vp.versione
+                LEFT   JOIN LATERAL jsonb_each_text(av.valori) AS v(chiave, valore) ON true
                 WHERE  p.utente_id = :u AND p.giorno = :g
-                ORDER  BY vp.aggiunto_il
+                ORDER  BY vp.aggiunto_il, vp.id
                 """)
             .param("u", utente).param("g", data)
-            .query(RigaVoce.class).list();
+            .query(RigaValore.class).list();
+
+        // Ricompone le voci mantenendo l'ordine di inserimento.
+        Map<Long, Diario.Voce> voci = new LinkedHashMap<>();
+        Map<Long, Map<String, BigDecimal>> valoriDi = new LinkedHashMap<>();
+        Map<Long, Long> pastoDi = new LinkedHashMap<>();
+
+        for (RigaValore r : righe) {
+            valoriDi.computeIfAbsent(r.voceId(), k -> new LinkedHashMap<>());
+            pastoDi.putIfAbsent(r.voceId(), r.pastoId());
+            if (r.chiave() != null && r.valore() != null) {
+                valoriDi.get(r.voceId()).put(r.chiave(), r.valore());
+            }
+            voci.putIfAbsent(r.voceId(), new Diario.Voce(
+                r.voceId(), r.alimentoId(), r.versione(), r.nome(), r.grammi(),
+                valoriDi.get(r.voceId())));
+        }
 
         Map<String, BigDecimal> totaleGiorno = new LinkedHashMap<>();
         List<Diario.Pasto> risultato = new ArrayList<>();
@@ -66,36 +93,16 @@ public class DiarioRepository {
             List<Diario.Voce> sue = new ArrayList<>();
             Map<String, BigDecimal> totalePasto = new LinkedHashMap<>();
 
-            for (RigaVoce v : voci) {
-                if (v.pastoId() != p.id()) continue;
-                Map<String, BigDecimal> proporzionati = proporziona(v.valori(), v.grammi());
-                sue.add(new Diario.Voce(v.id(), v.alimentoId(), v.versione(),
-                    v.nome(), v.grammi(), proporzionati));
-                accumula(totalePasto, proporzionati);
-            }
+            voci.forEach((voceId, voce) -> {
+                if (!Long.valueOf(p.id()).equals(pastoDi.get(voceId))) return;
+                sue.add(voce);
+                accumula(totalePasto, voce.valori());
+            });
+
             accumula(totaleGiorno, totalePasto);
             risultato.add(new Diario.Pasto(p.id(), p.tipo(), p.nome(), p.ordine(), sue, totalePasto));
         }
         return new Diario(data, risultato, totaleGiorno);
-    }
-
-    /** Proporzione al volo: valori per 100 g scalati sui grammi effettivi. */
-    private Map<String, BigDecimal> proporziona(String valoriJson, BigDecimal grammi) {
-        Map<String, BigDecimal> per100 = leggi(valoriJson);
-        BigDecimal fattore = grammi.divide(CENTO, 6, RoundingMode.HALF_UP);
-        Map<String, BigDecimal> out = new LinkedHashMap<>();
-        per100.forEach((k, v) -> {
-            if (v != null) out.put(k, v.multiply(fattore).setScale(3, RoundingMode.HALF_UP));
-        });
-        return out;
-    }
-
-    private Map<String, BigDecimal> leggi(String testo) {
-        try {
-            return json.readValue(testo, new TypeReference<Map<String, BigDecimal>>() {});
-        } catch (Exception e) {
-            throw new IllegalStateException("valori non leggibili", e);
-        }
     }
 
     private void accumula(Map<String, BigDecimal> dove, Map<String, BigDecimal> cosa) {

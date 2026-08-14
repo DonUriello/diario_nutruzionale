@@ -255,6 +255,14 @@ con il valore del cookie `XSRF-TOKEN`. Dal browser ci pensa `app.js`.
 
 ## Scelte che si discostano dal piano
 
+**Niente Jackson nei repository.** Spring Boot 4 adotta Jackson 3, che ha
+rinominato i package da `com.fasterxml.jackson` a `tools.jackson`. Invece di
+inseguire i nomi nuovi, la serializzazione del `jsonb` la fa Postgres: in
+scrittura la stringa JSON si compone a mano (chiavi e valori sono vincolati
+dal catalogo, non c'è nulla da sfuggire), in lettura `jsonb_each_text` esplode
+la mappa e la proporzione sui grammi è già nella query. Jackson resta dove
+serve davvero, cioè nel livello web, gestito da Spring.
+
 **JdbcClient invece di JPA.** Il piano prevedeva JPA per il CRUD e SQL a mano
 per le aggregazioni. Con il modello chiave-valore dei nutrienti, JPA aggiunge
 mappature senza dare nulla in cambio: qui è `JdbcClient` ovunque. Se in futuro

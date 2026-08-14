@@ -1,6 +1,5 @@
 package it.elia.nutri.alimento;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import it.elia.nutri.comune.GestoreErrori.NonTrovato;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -11,16 +10,15 @@ import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Repository
 public class AlimentoRepository {
 
     private final JdbcClient jdbc;
-    private final ObjectMapper json;
 
-    public AlimentoRepository(JdbcClient jdbc, ObjectMapper json) {
+    public AlimentoRepository(JdbcClient jdbc) {
         this.jdbc = jdbc;
-        this.json = json;
     }
 
     /**
@@ -159,16 +157,26 @@ public class AlimentoRepository {
     }
 
     private void scriviVersione(long id, int versione, String nome, Map<String, BigDecimal> valori) {
-        try {
-            String testo = json.writeValueAsString(valori == null ? Map.of() : valori);
-            jdbc.sql("""
-                    INSERT INTO alimento_versione (alimento_id, versione, nome, valori)
-                    VALUES (:id, :ver, :nome, CAST(:valori AS jsonb))
-                    """)
-                .param("id", id).param("ver", versione).param("nome", nome).param("valori", testo)
-                .update();
-        } catch (Exception e) {
-            throw new IllegalStateException("serializzazione valori fallita", e);
-        }
+        jdbc.sql("""
+                INSERT INTO alimento_versione (alimento_id, versione, nome, valori)
+                VALUES (:id, :ver, :nome, CAST(:valori AS jsonb))
+                """)
+            .param("id", id).param("ver", versione).param("nome", nome)
+            .param("valori", comeJson(valori))
+            .update();
+    }
+
+    /**
+     * Serializza la mappa dei valori senza passare da Jackson.
+     * È sicuro perché il contenuto non è arbitrario: le chiavi sono
+     * codici del catalogo nutrienti, già validati e vincolati da chiave
+     * esterna, e i valori sono BigDecimal. Niente da sfuggire.
+     */
+    private String comeJson(Map<String, BigDecimal> valori) {
+        if (valori == null || valori.isEmpty()) return "{}";
+        return valori.entrySet().stream()
+            .filter(e -> e.getValue() != null)
+            .map(e -> "\"" + e.getKey() + "\":" + e.getValue().toPlainString())
+            .collect(Collectors.joining(",", "{", "}"));
     }
 }
