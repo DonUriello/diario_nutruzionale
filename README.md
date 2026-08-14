@@ -302,6 +302,53 @@ src/main/resources/db/migration/
   V003__sessioni.sql    Spring Session + inviti
 ```
 
+## Test
+
+Nel progetto non ce ne sono ancora. Quando li scrivi, servono Testcontainers
+con un Postgres vero: su questo schema i test con H2 sono peggio che inutili,
+perché mancano `jsonb`, `pg_trgm` e `jsonb_each_text`, cioè esattamente le
+query che contano.
+
+Dalla versione 2.x il BOM è obbligatorio e gli artefatti dei moduli hanno il
+prefisso `testcontainers-` (prima erano `org.testcontainers:postgresql`).
+Aggiungi al `pom.xml`:
+
+```xml
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-bom</artifactId>
+            <version>2.0.5</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+```
+
+e fra le dipendenze:
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-testcontainers</artifactId>
+    <scope>test</scope>
+</dependency>
+<dependency>
+    <groupId>org.testcontainers</groupId>
+    <artifactId>testcontainers-postgresql</artifactId>
+    <scope>test</scope>
+</dependency>
+```
+
+Controlla la versione corrente del BOM su Maven Central prima di fissarla.
+
+Le tre famiglie di test che valgono più delle altre: le aggregazioni con
+numeri calcolati a penna, l'isolamento fra utenti (A non deve vedere i dati
+di B, per ogni endpoint), e il validatore energetico sui casi limite come
+l'olio, dove le fibre sono zero e i grassi quasi cento.
+
 ## Note sul modello
 
 **Le versioni.** Modificare un alimento crea una versione nuova in

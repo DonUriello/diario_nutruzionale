@@ -74,16 +74,9 @@
             <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-testcontainers</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>postgresql</artifactId>
-            <scope>test</scope>
-        </dependency>
+        <!-- Testcontainers: si aggiunge quando si scrivono i test.
+             Vedi la sezione "Test" nel README: dalla 2.x serve il BOM
+             e gli artefatti hanno il prefisso testcontainers-. -->
     </dependencies>
 
     <build>
