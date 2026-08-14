@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#22211E">
+<title>Diario nutrizionale</title>
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+
+<!-- Accesso -->
+<section id="schermata-accesso" class="accesso" hidden>
+  <div class="accesso-scheda">
+    <p class="eyebrow">Diario nutrizionale</p>
+    <h1>Entra</h1>
+
+    <div class="segmenti" role="tablist">
+      <button class="seg seg--att" data-modo="accesso" role="tab">Ho un account</button>
+      <button class="seg" data-modo="registrazione" role="tab">Sono invitato</button>
+    </div>
+
+    <label class="campo">
+      <span>Email</span>
+      <input id="in-email" type="email" autocomplete="username" placeholder="nome@esempio.it">
+    </label>
+
+    <label class="campo">
+      <span>Password</span>
+      <input id="in-password" type="password" autocomplete="current-password" placeholder="••••••••">
+    </label>
+
+    <label class="campo" id="campo-invito" hidden>
+      <span>Codice di invito</span>
+      <input id="in-invito" type="text" placeholder="PRIMO-INVITO">
+    </label>
+
+    <p id="accesso-errore" class="avviso avviso--male" hidden></p>
+
+    <button id="btn-entra" class="btn btn--primario btn--largo">Entra</button>
+  </div>
+</section>
+
+<!-- Applicazione -->
+<div id="schermata-app" hidden>
+
+  <header class="testata">
+    <div>
+      <p class="eyebrow eyebrow--chiaro" id="etichetta-utente"></p>
+      <h1 id="titolo-giorno">Oggi</h1>
+    </div>
+    <div class="lcd" aria-live="polite">
+      <div class="lcd-cifre">
+        <span class="lcd-ombra">8888</span>
+        <span class="lcd-vero" id="kcal-giorno">0</span>
+      </div>
+      <span class="lcd-unita">kcal oggi</span>
+    </div>
+  </header>
+
+  <nav class="barra-giorno">
+    <button id="btn-ieri" class="passo" aria-label="Giorno precedente">‹</button>
+    <input id="in-data" type="date" aria-label="Giorno">
+    <button id="btn-domani" class="passo" aria-label="Giorno successivo">›</button>
+    <button id="btn-esci" class="mini">esci</button>
+  </nav>
+
+  <main class="corpo">
+
+    <!-- Colonna lavoro -->
+    <section class="colonna">
+      <div class="scheda" id="pannello-dispensa">
+        <div class="scheda-testa">
+          <span class="eyebrow">Dispensa</span>
+          <span class="conta" id="conta-alimenti">0</span>
+        </div>
+
+        <div class="cerca">
+          <input id="in-cerca" type="search" placeholder="Cerca un ingrediente…" aria-label="Cerca">
+        </div>
+
+        <ul class="lista" id="lista-alimenti"></ul>
+        <button id="btn-nuovo" class="btn btn--largo">+ Nuovo ingrediente</button>
+      </div>
+
+      <!-- Bilancia -->
+      <div class="scheda bilancia bilancia--spenta" id="pannello-bilancia">
+        <div class="scheda-testa">
+          <span class="eyebrow">Bilancia</span>
+          <button class="mini" id="btn-cambia" hidden>cambia</button>
+        </div>
+
+        <p class="bilancia-nome" id="bilancia-nome">Scegli un ingrediente dalla dispensa</p>
+
+        <div class="lcd">
+          <div class="lcd-cifre">
+            <span class="lcd-ombra">888,8</span>
+            <span class="lcd-vero" id="lcd-grammi">—</span>
+          </div>
+          <span class="lcd-unita">g</span>
+        </div>
+
+        <div class="peso-riga">
+          <button class="passo" id="btn-meno" disabled>−10</button>
+          <input id="in-grammi" class="peso-input" inputmode="decimal" value="100" disabled aria-label="Grammi">
+          <button class="passo" id="btn-piu" disabled>+10</button>
+        </div>
+
+        <div class="chip-riga" id="chip-grammi"></div>
+
+        <div id="anteprima"></div>
+
+        <div id="destinazione" hidden>
+          <span class="eyebrow">Aggiungi a</span>
+          <div class="segmenti" id="segmenti-pasto"></div>
+          <button id="btn-aggiungi" class="btn btn--primario btn--largo">Aggiungi al pasto</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Colonna diario -->
+    <section class="colonna" id="colonna-diario"></section>
+  </main>
+</div>
+
+<!-- Modale ingrediente -->
+<div class="velo" id="velo" hidden>
+  <div class="modale" role="dialog" aria-modal="true" aria-labelledby="modale-titolo">
+    <div class="modale-testa">
+      <span class="eyebrow" id="modale-titolo">Nuovo ingrediente</span>
+      <button class="x" id="btn-chiudi" aria-label="Chiudi">×</button>
+    </div>
+
+    <label class="campo">
+      <span>Nome</span>
+      <input id="f-nome" type="text" placeholder="es. Fusilli Rummo">
+    </label>
+
+    <div class="riga-due">
+      <label class="campo">
+        <span>Marca</span>
+        <input id="f-marca" type="text" placeholder="facoltativa">
+      </label>
+      <label class="campo">
+        <span>Stato</span>
+        <select id="f-stato">
+          <option value="CRUDO">Crudo</option>
+          <option value="SECCO">Secco</option>
+          <option value="COTTO">Cotto</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="barra-sottile"></div>
+    <p class="nota">Copia i valori dall'etichetta, sempre <strong>per 100 g</strong>. Lascia vuoto ciò che non è dichiarato: vuoto non è zero.</p>
+
+    <div id="campi-nutrienti"></div>
+
+    <label class="campo campo--aiuto">
+      <span>Sale in etichetta</span>
+      <span class="campo-input">
+        <input id="f-sale" inputmode="decimal" placeholder="0">
+        <em>g</em>
+      </span>
+    </label>
+    <p class="nota nota--piccola">Le etichette italiane dichiarano il sale, non il sodio: scrivilo qui e il sodio si compila da solo.</p>
+
+    <p id="modale-errore" class="avviso avviso--male" hidden></p>
+    <p id="modale-avviso" class="avviso avviso--attenzione" hidden></p>
+
+    <div class="azioni">
+      <button id="btn-salva" class="btn btn--primario">Salva in dispensa</button>
+      <button id="btn-annulla" class="btn">Annulla</button>
+    </div>
+  </div>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>
