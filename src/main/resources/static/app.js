@@ -18,6 +18,7 @@ const stato = {
   giorno: oggiISO(),
   diario: null,
   modificando: null,   // id alimento in modifica, null se nuovo
+  fonteProposta: 'MANUALE',
   aperti: {},
 };
 
@@ -447,6 +448,10 @@ function apriModale(alimento) {
   $('modale-errore').hidden = true;
   $('modale-avviso').hidden = true;
   disegnaCampiNutrienti(alimento?.per100);
+  stato.fonteProposta = alimento?.fonte || 'MANUALE';
+  $('f-cerca-off').value = '';
+  $('risultati-off').innerHTML = '';
+  statoOff(null);
   $('velo').hidden = false;
   $('f-nome').focus();
 }
@@ -485,7 +490,7 @@ $('btn-salva').addEventListener('click', async () => {
     nome,
     marca: $('f-marca').value.trim() || null,
     stato: $('f-stato').value,
-    fonte: 'MANUALE',
+    fonte: stato.fonteProposta || 'MANUALE',
     per100,
   };
 
@@ -506,6 +511,105 @@ $('btn-salva').addEventListener('click', async () => {
     err.textContent = e.message;
     err.hidden = false;
   }
+});
+
+
+/* ---------------------------------------------------------------
+   Ricerca su Open Food Facts
+   --------------------------------------------------------------- */
+
+/** Campi che ci si aspetta su un'etichetta europea. */
+const NECESSARI = ['kcal', 'grassi', 'saturi', 'carbo', 'zuccheri', 'proteine', 'sodio'];
+
+const memoria = { risultatiOff: [] };
+
+/** Un codice a barre è 8, 12 o 13 cifre e nient'altro. */
+const sembraEan = (q) => /^\d{8}$|^\d{12,13}$/.test(q.replace(/\s/g, ''));
+
+function statoOff(testo, tipo) {
+  const el = $('stato-off');
+  if (!testo) { el.hidden = true; return; }
+  el.textContent = testo;
+  el.className = 'avviso' + (tipo ? ' avviso--' + tipo : '');
+  el.hidden = false;
+}
+
+async function cercaOff() {
+  const q = $('f-cerca-off').value.trim();
+  if (q.length < 2) return;
+
+  $('risultati-off').innerHTML = '';
+  statoOff('Cerco…');
+
+  try {
+    if (sembraEan(q)) {
+      // Codice a barre: un solo risultato, lo applico subito.
+      const p = await api('GET', `/api/lookup/ean/${encodeURIComponent(q)}`);
+      applicaProdotto(p);
+      statoOff(null);
+      return;
+    }
+    const trovati = await api('GET', `/api/lookup/nome?q=${encodeURIComponent(q)}`);
+    if (!trovati.length) {
+      statoOff('Nessun prodotto trovato. Prova con un nome diverso, o compila i campi a mano.', 'attenzione');
+      return;
+    }
+    statoOff(null);
+    disegnaRisultatiOff(trovati);
+  } catch (e) {
+    statoOff(e.message, 'male');
+  }
+}
+
+function disegnaRisultatiOff(trovati) {
+  memoria.risultatiOff = trovati;
+  $('risultati-off').innerHTML = trovati.map((p, i) => {
+    const kcal = p.per100?.kcal;
+    const mancanti = NECESSARI.filter((k) => p.per100?.[k] === undefined);
+    return `<li>
+      <button class="risultato" data-i="${i}">
+        <span class="risultato-nome">${esc(p.nome)}</span>
+        <span class="risultato-info">
+          ${p.marca ? esc(p.marca) + ' · ' : ''}
+          <span class="risultato-kcal">${kcal === undefined ? '—' : fmt(kcal, 'kcal') + ' kcal'}</span>
+          ${mancanti.length ? ` · <span class="risultato-parziale">manca ${mancanti.length} valore${mancanti.length > 1 ? 'i' : ''}</span>` : ''}
+        </span>
+      </button>
+    </li>`;
+  }).join('');
+}
+
+function applicaProdotto(p) {
+  stato.fonteProposta = p.fonte || 'MANUALE';
+  if (p.nome) $('f-nome').value = p.nome;
+  if (p.marca) $('f-marca').value = p.marca;
+
+  // Riempie solo i campi che la fonte dichiara: vuoto resta vuoto,
+  // perché "non dichiarato" non è "zero".
+  document.querySelectorAll('[data-n]').forEach((i) => {
+    const v = p.per100?.[i.dataset.n];
+    if (v !== undefined && v !== null) i.value = String(v).replace('.', ',');
+  });
+
+  $('risultati-off').innerHTML = '';
+  $('f-cerca-off').value = '';
+
+  const mancanti = NECESSARI.filter((k) => p.per100?.[k] === undefined);
+  statoOff(mancanti.length
+    ? 'Valori dal produttore. La scheda è incompleta: controlla i campi rimasti vuoti sulla confezione.'
+    : 'Valori dal produttore. Controllali con l\'etichetta prima di salvare: le ricette cambiano nel tempo.',
+    mancanti.length ? 'attenzione' : null);
+}
+
+$('btn-cerca-off').addEventListener('click', cercaOff);
+$('f-cerca-off').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); cercaOff(); }
+});
+
+$('risultati-off').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-i]');
+  if (!b) return;
+  applicaProdotto(memoria.risultatiOff[Number(b.dataset.i)]);
 });
 
 /* ---------------------------------------------------------------

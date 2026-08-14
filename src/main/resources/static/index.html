@@ -131,7 +131,20 @@
       <button class="x" id="btn-chiudi" aria-label="Chiudi">×</button>
     </div>
 
-    <label class="campo">
+    <div class="ricerca-off">
+      <span class="eyebrow">Cerca il prodotto</span>
+      <div class="ricerca-riga">
+        <input id="f-cerca-off" type="search" placeholder="nome o codice a barre">
+        <button id="btn-cerca-off" class="btn btn--primario">Cerca</button>
+      </div>
+      <p class="nota nota--piccola">Dati dei produttori da Open Food Facts. Compilo i campi, tu li controlli.</p>
+      <ul class="risultati-off" id="risultati-off"></ul>
+      <p id="stato-off" class="avviso" hidden></p>
+    </div>
+
+    <div class="barra-sottile"></div>
+
+    <label class="campo campo--dopo-barra">
       <span>Nome</span>
       <input id="f-nome" type="text" placeholder="es. Fusilli Rummo">
     </label>

@@ -225,6 +225,61 @@ Start Command:  java -jar target/diarionutrizionale-0.0.1-SNAPSHOT.jar
 
 Meno controllo sull'immagine, ma un file in meno da mantenere.
 
+## Ricerca prodotti (Open Food Facts)
+
+Nella scheda del nuovo ingrediente c'è un campo di ricerca che interroga
+Open Food Facts: banca dati collaborativa di prodotti alimentari, gratuita,
+senza chiave API.
+
+Scrivi il nome (`fusilli rummo`) e scegli fra i risultati, oppure digita il
+**codice a barre** — se il campo contiene solo 8, 12 o 13 cifre viene
+riconosciuto come EAN e il prodotto è applicato subito, senza lista.
+
+I valori atterrano nel form con un avviso e **non vengono salvati**: sei tu a
+premere Salva. Se la scheda del produttore è incompleta l'avviso diventa
+giallo e ti dice quanti campi restano da compilare a mano.
+
+### Cose che il client normalizza
+
+- **kJ contro kcal.** Il campo `energy` di Open Food Facts è in kilojoule;
+  le calorie stanno in `energy-kcal_100g`. Leggere quello sbagliato dà valori
+  quadruplicati.
+- **Minerali in grammi.** Calcio e ferro arrivano in grammi, non milligrammi:
+  il ferro è `0.0014`, non `1.4`. Senza conversione lo scarto è di tre ordini
+  di grandezza.
+- **Sale invece di sodio.** Se manca il sodio si ricava dal sale, fattore 400.
+- **Codice inesistente.** Restituiscono 200 con `status: 0`, quindi il codice
+  HTTP non basta a capire se il prodotto c'è.
+
+### Configurazione
+
+In `application.yml`:
+
+```yaml
+off:
+  base-url: https://world.openfoodfacts.org
+  user-agent: DiarioNutrizionale/0.1 (uso personale)
+```
+
+Lo `User-Agent` è una loro condizione d'uso: chiedono di identificare
+l'applicazione, nella forma `NomeApp/Versione (contatto)`. Mettici un
+riferimento vero se un giorno l'uso diventa intenso.
+
+I dati sono sotto licenza ODbL. Per uso personale non comporta obblighi;
+se un giorno ridistribuisci il database, sì.
+
+### Cosa manca ancora
+
+- **Cache.** Ogni ricerca è una chiamata. Open Food Facts è gratuito e non
+  pone limiti per un uso ragionevole, quindi non è urgente; una tabella
+  `lookup_cache` sul nome normalizzato lo diventerebbe con più utenti.
+- **Scanner del codice a barre dalla fotocamera.** Su Android Chrome basta
+  `BarcodeDetector`, nativo e senza dipendenze; su iPhone non esiste e serve
+  una libreria JavaScript che decodifica dal flusso video. Per ora il codice
+  si digita.
+- **Il modello come ultima risorsa**, per gli alimenti generici che su Open
+  Food Facts non ci sono. Per quelli c'è già il catalogo CREA.
+
 ## Account
 
 La registrazione è **su invito**: un diario alimentare non ha motivo di
