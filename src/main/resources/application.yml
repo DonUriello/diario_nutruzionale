@@ -41,3 +41,5 @@ management:
 logging:
   level:
     pj.eu.diarionutrizionale: DEBUG
+    # Utile mentre si sistema l'accesso; da togliere dopo.
+    org.springframework.security: DEBUG

@@ -3,8 +3,6 @@ package pj.eu.diarionutrizionale.comune;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -14,13 +12,12 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 
 /**
- * Sessione su cookie, non JWT: con un backend solo e il frontend
- * sullo stesso dominio il token non compra nulla e non si revoca.
+ * Sessione su cookie, non JWT: con un backend solo e il frontend sullo
+ * stesso dominio il token non compra nulla e non si revoca.
  *
- * Il cookie di sessione è HttpOnly e SameSite=Lax (application.yml).
- * Il token CSRF sta in un cookie leggibile da JavaScript, che il
- * frontend rimanda nell'header X-XSRF-TOKEN: è lo schema previsto
- * per le single page application.
+ * Non c'è un bean AuthenticationManager: la verifica della password la fa
+ * AutenticazioneController con il PasswordEncoder. Dichiararlo qui insieme
+ * al PasswordEncoder crea anche un rischio di dipendenza circolare.
  */
 @Configuration
 public class SicurezzaConfig {
@@ -28,6 +25,10 @@ public class SicurezzaConfig {
     @Bean
     SecurityFilterChain filtri(HttpSecurity http) throws Exception {
         var csrfHandler = new CsrfTokenRequestAttributeHandler();
+        // Senza questo il token CSRF è "differito": viene generato solo se
+        // qualcuno lo legge, quindi il cookie XSRF-TOKEN non viene mai
+        // scritto e ogni POST del frontend si prende un 403.
+        csrfHandler.setCsrfRequestAttributeName(null);
 
         return http
             .csrf(c -> c
@@ -51,11 +52,5 @@ public class SicurezzaConfig {
     @Bean
     PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
-    }
-
-    /** Non è un bean di default: serve al controller di accesso. */
-    @Bean
-    AuthenticationManager authenticationManager(AuthenticationConfiguration c) throws Exception {
-        return c.getAuthenticationManager();
     }
 }

@@ -8,15 +8,17 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -25,13 +27,19 @@ import java.util.Map;
 @RequestMapping("/api/auth")
 public class AutenticazioneController {
 
+    private static final Logger log = LoggerFactory.getLogger(AutenticazioneController.class);
+
     private final UtenteRepository utenti;
-    private final AuthenticationManager autenticatore;
+    private final UtenteDettagliService dettagli;
+    private final PasswordEncoder cifratore;
     private final SecurityContextRepository contesti = new HttpSessionSecurityContextRepository();
 
-    public AutenticazioneController(UtenteRepository utenti, AuthenticationManager autenticatore) {
+    public AutenticazioneController(UtenteRepository utenti,
+                                    UtenteDettagliService dettagli,
+                                    PasswordEncoder cifratore) {
         this.utenti = utenti;
-        this.autenticatore = autenticatore;
+        this.dettagli = dettagli;
+        this.cifratore = cifratore;
     }
 
     public record Registrazione(
@@ -71,20 +79,35 @@ public class AutenticazioneController {
     }
 
     /**
-     * Autentica e salva il contesto in sessione. Senza il salvataggio
-     * esplicito l'autenticazione varrebbe solo per questa richiesta.
+     * Verifica la password e salva il contesto in sessione.
+     *
+     * Il confronto è fatto qui con il PasswordEncoder invece di passare da
+     * AuthenticationManager e DaoAuthenticationProvider: meno pezzi in mezzo,
+     * e il messaggio di log dice esattamente quale dei due controlli fallisce.
      */
     private void entra(String email, String password,
                        HttpServletRequest req, HttpServletResponse res) {
+        UserDetails utente;
         try {
-            var token = UsernamePasswordAuthenticationToken.unauthenticated(email, password);
-            var auth = autenticatore.authenticate(token);
-            var contesto = SecurityContextHolder.createEmptyContext();
-            contesto.setAuthentication(auth);
-            SecurityContextHolder.setContext(contesto);
-            contesti.saveContext(contesto, req, res);
-        } catch (BadCredentialsException e) {
+            utente = dettagli.loadUserByUsername(email);
+        } catch (UsernameNotFoundException e) {
+            log.debug("accesso fallito: nessun utente con email {}", email);
             throw new DatoNonValido("email o password non corretti");
         }
+
+        if (!cifratore.matches(password, utente.getPassword())) {
+            log.debug("accesso fallito: password errata per {}", email);
+            throw new DatoNonValido("email o password non corretti");
+        }
+
+        var auth = UsernamePasswordAuthenticationToken.authenticated(
+            utente, null, utente.getAuthorities());
+
+        var contesto = SecurityContextHolder.createEmptyContext();
+        contesto.setAuthentication(auth);
+        SecurityContextHolder.setContext(contesto);
+        contesti.saveContext(contesto, req, res);
+
+        log.debug("accesso riuscito per {}", email);
     }
 }
