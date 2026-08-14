@@ -19,7 +19,7 @@ const stato = {
   diario: null,
   modificando: null,   // id alimento in modifica, null se nuovo
   fonteProposta: 'MANUALE',
-  aperti: {},
+  pastoAperto: null,   // id pasto aperto nel popup, null se chiuso
 };
 
 /* ---------------------------------------------------------------
@@ -159,7 +159,12 @@ function etichetta(titolo, sottotitolo, valori, totale) {
     const v = valori ? valori[n.codice] : null;
     const assente = v === null || v === undefined;
     return `<tr class="${stacco ? 'stacco' : ''}">
-      <th class="${n.padre ? 'sub' : ''}">${esc(n.nome)}</th>
+      <th class="${n.padre ? 'sub' : ''}">
+        <span class="th-in">
+          <svg class="n-ic n-ic--${n.codice}" aria-hidden="true"><use href="#ic-${n.codice}"></use></svg>
+          <span>${esc(n.nome)}</span>
+        </span>
+      </th>
       <td>
         <span class="val ${assente ? 'val--assente' : ''}">${fmt(assente ? null : v, n.unita)}</span>
         <span class="unit">${assente ? '' : esc(n.unita)}</span>
@@ -318,7 +323,6 @@ $('btn-aggiungi').addEventListener('click', async () => {
   if (!stato.scelto || !stato.pastoTarget || g === null || g <= 0) return;
   await api('POST', `/api/pasti/${stato.pastoTarget}/voci`,
     { alimentoId: stato.scelto.id, grammi: g });
-  stato.aperti[stato.pastoTarget] = stato.aperti[stato.pastoTarget] ?? false;
   stato.scelto = null;
   stato.grammi = '100';
   disegnaDispensa();
@@ -333,6 +337,7 @@ async function caricaDiario() {
   stato.diario = await api('GET', `/api/giorni/${stato.giorno}`);
   disegnaDiario();
   disegnaSegmentiPasto();
+  if (stato.pastoAperto != null) disegnaPopupPasto();
 }
 
 function disegnaDiario() {
@@ -342,59 +347,81 @@ function disegnaDiario() {
 
   const nVoci = d.pasti.reduce((s, p) => s + p.voci.length, 0);
 
-  $('colonna-diario').innerHTML = d.pasti.map((p) => {
-    const aperto = !!stato.aperti[p.id];
-    const voci = p.voci.length === 0
-      ? `<p class="vuoto">Niente qui. Pesa un ingrediente e aggiungilo.</p>`
-      : `<ul class="voci">${p.voci.map((v) => `
-          <li>
-            <span class="voce-nome">${esc(v.nome)}</span>
-            <span class="voce-peso">
-              <input inputmode="decimal" value="${fmt(v.grammi, 'g')}" data-voce="${v.id}" aria-label="Grammi di ${esc(v.nome)}">
-              <em>g</em>
-            </span>
-            <span class="voce-kcal">${fmt(v.valori?.kcal ?? 0, 'kcal')}</span>
-            <button class="x x--piccolo" data-togli="${v.id}" aria-label="Togli dal pasto">×</button>
-          </li>`).join('')}</ul>`;
+  const carte = d.pasti.map((p) => `
+    <button class="pasto-card" data-pasto-apri="${p.id}">
+      <span class="pc-testa">
+        <span class="pc-nome">${esc(nomePasto(p))}</span>
+        <svg class="pc-freccia" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+      </span>
+      <span class="pc-kcal">${fmt(p.totale?.kcal ?? 0, 'kcal')}<em>kcal</em></span>
+      <span class="pc-prot">Proteine ${fmt(p.totale?.proteine ?? 0, 'g')} g</span>
+    </button>`).join('');
 
-    return `<div class="scheda">
-      <div class="pasto-testa">
-        <h2>${esc(nomePasto(p))}</h2>
-        <span class="pasto-kcal">${fmt(p.totale?.kcal ?? 0, 'kcal')} kcal</span>
-      </div>
-      ${voci}
-      ${p.voci.length ? `<button class="espandi" data-espandi="${p.id}">
-          ${aperto ? 'Nascondi i valori del pasto' : 'Mostra i valori del pasto'}
-        </button>` : ''}
-      ${p.voci.length && aperto ? etichetta(nomePasto(p), 'totale del pasto', p.totale, false) : ''}
+  $('colonna-diario').innerHTML = `
+    <div class="pasti-testa"><span class="eyebrow">Pasti di oggi</span></div>
+    <div class="pasti-griglia">${carte}</div>
+    <button class="btn btn--largo" id="btn-spuntino">+ Aggiungi spuntino</button>
+    <div class="scheda scheda--totale">
+      ${etichetta('Totale giornata', `${nVoci} ${nVoci === 1 ? 'voce' : 'voci'} in ${d.pasti.length} pasti`, d.totale, true)}
     </div>`;
-  }).join('')
-  + `<button class="btn btn--largo" id="btn-spuntino">+ Aggiungi spuntino</button>
-     <div class="scheda scheda--totale">
-       ${etichetta('Totale giornata', `${nVoci} ${nVoci === 1 ? 'voce' : 'voci'} in ${d.pasti.length} pasti`, d.totale, true)}
-     </div>`;
+}
+
+/* ---------------------------------------------------------------
+   Popup dettaglio pasto
+   --------------------------------------------------------------- */
+function apriPasto(id) {
+  stato.pastoAperto = id;
+  disegnaPopupPasto();
+  $('velo-pasto').hidden = false;
+}
+
+function chiudiPasto() { $('velo-pasto').hidden = true; stato.pastoAperto = null; }
+
+function disegnaPopupPasto() {
+  const p = stato.diario?.pasti.find((x) => x.id === stato.pastoAperto);
+  if (!p) { chiudiPasto(); return; }
+  $('modale-pasto-titolo').textContent = nomePasto(p);
+
+  const voci = p.voci.length === 0
+    ? `<p class="vuoto">Niente qui. Pesa un ingrediente sulla bilancia e aggiungilo a questo pasto.</p>`
+    : `<ul class="voci">${p.voci.map((v) => `
+        <li>
+          <span class="voce-nome">${esc(v.nome)}</span>
+          <span class="voce-peso">
+            <input inputmode="decimal" value="${fmt(v.grammi, 'g')}" data-voce="${v.id}" aria-label="Grammi di ${esc(v.nome)}">
+            <em>g</em>
+          </span>
+          <span class="voce-kcal">${fmt(v.valori?.kcal ?? 0, 'kcal')}</span>
+          <button class="x x--piccolo" data-togli="${v.id}" aria-label="Togli dal pasto">×</button>
+        </li>`).join('')}</ul>`;
+
+  $('modale-pasto-corpo').innerHTML = voci
+    + (p.voci.length ? etichetta(nomePasto(p), 'totale del pasto', p.totale, false) : '');
 }
 
 $('colonna-diario').addEventListener('click', async (e) => {
   const b = e.target.closest('button');
   if (!b) return;
-
   if (b.id === 'btn-spuntino') {
     await api('POST', `/api/giorni/${stato.giorno}/pasti`, { tipo: 'SPUNTINO' });
     await caricaDiario();
+    return;
   }
-  if (b.dataset.espandi) {
-    const id = Number(b.dataset.espandi);
-    stato.aperti[id] = !stato.aperti[id];
-    disegnaDiario();
-  }
-  if (b.dataset.togli) {
-    await api('DELETE', `/api/voci/${b.dataset.togli}`);
-    await caricaDiario();
-  }
+  if (b.dataset.pastoApri) apriPasto(Number(b.dataset.pastoApri));
 });
 
-$('colonna-diario').addEventListener('change', async (e) => {
+$('btn-chiudi-pasto').addEventListener('click', chiudiPasto);
+$('velo-pasto').addEventListener('click', (e) => { if (e.target === $('velo-pasto')) chiudiPasto(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('velo-pasto').hidden) chiudiPasto(); });
+
+$('modale-pasto-corpo').addEventListener('click', async (e) => {
+  const b = e.target.closest('button');
+  if (!b || !b.dataset.togli) return;
+  await api('DELETE', `/api/voci/${b.dataset.togli}`);
+  await caricaDiario();
+});
+
+$('modale-pasto-corpo').addEventListener('change', async (e) => {
   const i = e.target.closest('[data-voce]');
   if (!i) return;
   const g = num(i.value);
@@ -428,7 +455,10 @@ function disegnaCampiNutrienti(valori) {
     const v = valori?.[n.codice];
     const testo = v === null || v === undefined ? '' : String(v).replace('.', ',');
     return `<label class="campo-nutriente ${n.padre ? 'campo-nutriente--sub' : ''}">
-      <span>${esc(n.nome)}</span>
+      <span class="cn-nome">
+        <svg class="n-ic n-ic--${n.codice}" aria-hidden="true"><use href="#ic-${n.codice}"></use></svg>
+        ${esc(n.nome)}
+      </span>
       <span class="campo-input">
         <input inputmode="decimal" data-n="${n.codice}" value="${esc(testo)}" placeholder="—">
         <em>${esc(n.unita)}</em>
