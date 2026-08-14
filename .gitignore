@@ -1,0 +1,5 @@
+# Build Maven
+target/
+
+# Log e file temporanei
+*.log
