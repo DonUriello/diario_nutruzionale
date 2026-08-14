@@ -3,16 +3,16 @@ services:
     image: postgres:18
     container_name: diario-db
     environment:
-      POSTGRES_USER: nutri
+      POSTGRES_USER: diario
       POSTGRES_PASSWORD: dev
-      POSTGRES_DB: nutri
+      POSTGRES_DB: diario
     ports:
       # 5433 sull'host: lascia libera la 5432 a un Postgres nativo.
       - "5433:5432"
     volumes:
       - diario-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U nutri -d nutri"]
+      test: ["CMD-SHELL", "pg_isready -U diario -d diario"]
       interval: 5s
       timeout: 5s
       retries: 10

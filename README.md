@@ -4,16 +4,6 @@ Spring Boot 4.1 / Java 25 / PostgreSQL 18, frontend senza build step.
 Copre le fasi 0 e 1 del piano: schema, catalogo nutrienti, alimenti con
 versioning, diario, totali di pasto e di giornata.
 
-## Attenzione: una sola classe principale
-
-Se hai generato lo scheletro da Spring Initializr, hai già una classe annotata
-`@SpringBootApplication` nel package `pj.eu.diarionutrizionale`. Tienine **una
-sola**: due classi con quell'annotazione nello stesso progetto fanno fallire
-l'avvio con `Unable to find a single main class`.
-
-Se la tua si chiama diversamente da `DiarioNutrizionaleApplication`, cancella
-la mia e tieni la tua — il nome non conta, conta che ce ne sia una.
-
 ## Avvio
 
 **1. Database**
@@ -36,7 +26,7 @@ docker compose logs db
 **2. Applicazione**
 
 ```
-./mvnw spring-boot:run
+mvn spring-boot:run
 ```
 
 Al primo avvio Flyway crea lo schema e popola il catalogo nutrienti.
@@ -44,6 +34,19 @@ Nei log deve comparire `Successfully applied 3 migrations`.
 
 Poi apri **http://localhost:8080**.
 
+
+## Wrapper Maven
+
+Il progetto usa `mvn` di sistema, non `./mvnw`: gli script del wrapper erano
+presenti senza la cartella `.mvn/wrapper` che serve a farli funzionare. Se lo
+vuoi, si rigenera con:
+
+```
+mvn -N wrapper:wrapper
+```
+
+e poi il wrapper va aggiunto al repository, cartella `.mvn` compresa. Il
+`Dockerfile` non ne ha bisogno: usa il `mvn` dell'immagine Maven.
 
 ## Database su Supabase
 
@@ -71,7 +74,7 @@ L'utente in session mode ha la forma `postgres.<project-ref>`, non `postgres`.
 
 ```
 export $(cat .env | xargs)
-./mvnw spring-boot:run -Dspring-boot.run.profiles=supabase
+mvn spring-boot:run -Dspring-boot.run.profiles=supabase
 ```
 
 Flyway crea lo schema al primo avvio, come in locale.

@@ -5,8 +5,8 @@ spring:
   # Predefinito: Postgres locale in Docker.
   # Per Supabase:  -Dspring-boot.run.profiles=supabase
   datasource:
-    url: jdbc:postgresql://localhost:5433/nutri
-    username: diarionutrizionale
+    url: jdbc:postgresql://localhost:5433/diario
+    username: diario
     password: dev
   flyway:
     enabled: true
