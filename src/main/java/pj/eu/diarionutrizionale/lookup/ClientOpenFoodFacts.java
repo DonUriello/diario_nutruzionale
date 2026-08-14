@@ -43,8 +43,7 @@ public class ClientOpenFoodFacts {
 
     private final RestClient client;
 
-    public ClientOpenFoodFacts(RestClient.Builder builder,
-                               @Value("${openfoodfacts.base-url}") String baseUrl,
+    public ClientOpenFoodFacts(@Value("${openfoodfacts.base-url}") String baseUrl,
                                @Value("${openfoodfacts.user-agent}") String userAgent) {
         // Timeout espliciti: una fonte esterna lenta non deve tenere in ostaggio
         // la richiesta dell'utente. Con i virtual thread il blocco costa poco,
@@ -55,7 +54,11 @@ public class ClientOpenFoodFacts {
         var factory = new JdkClientHttpRequestFactory(http);
         factory.setReadTimeout(Duration.ofSeconds(8));
 
-        this.client = builder
+        // Costruttore statico, non il bean RestClient.Builder auto-configurato:
+        // in Spring Boot 4 quell'auto-configurazione è in un modulo a parte e
+        // starter-web non la porta più di suo. builder() registra comunque i
+        // convertitori JSON di default, quindi la lettura delle risposte regge.
+        this.client = RestClient.builder()
             .baseUrl(baseUrl)
             .defaultHeader(HttpHeaders.USER_AGENT, userAgent)
             .requestFactory(factory)
