@@ -6,9 +6,12 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.math.BigDecimal;
 import java.net.http.HttpClient;
@@ -54,14 +57,22 @@ public class ClientOpenFoodFacts {
         var factory = new JdkClientHttpRequestFactory(http);
         factory.setReadTimeout(Duration.ofSeconds(8));
 
+        // Leggiamo i decimali JSON direttamente come BigDecimal. Senza questo,
+        // per i valori a virgola mobile Jackson userebbe dei double: sui
+        // nutrienti non vogliamo l'imprecisione dell'aritmetica binaria.
+        JsonMapper mapper = JsonMapper.builder()
+            .enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
+            .build();
+        var convertitoreJson = new JacksonJsonHttpMessageConverter(mapper);
+
         // Costruttore statico, non il bean RestClient.Builder auto-configurato:
         // in Spring Boot 4 quell'auto-configurazione è in un modulo a parte e
-        // starter-web non la porta più di suo. builder() registra comunque i
-        // convertitori JSON di default, quindi la lettura delle risposte regge.
+        // starter-web non la porta più di suo.
         this.client = RestClient.builder()
             .baseUrl(baseUrl)
             .defaultHeader(HttpHeaders.USER_AGENT, userAgent)
             .requestFactory(factory)
+            .configureMessageConverters(c -> c.registerDefaults().withJsonConverter(convertitoreJson))
             .build();
     }
 
@@ -175,7 +186,11 @@ public class ClientOpenFoodFacts {
         return grammi == null ? null : grammi.multiply(BigDecimal.valueOf(1000));
     }
 
-    /** Un valore di OFF può arrivare come numero o come stringa: normalizziamo. */
+    /**
+     * Un valore di OFF può arrivare come numero o come stringa: normalizziamo.
+     * I decimali sono già BigDecimal (il mapper è configurato così); interi e
+     * stringhe passano da toString, mai da un double, per non perdere cifre.
+     */
     private static BigDecimal numero(Object v) {
         if (v == null) return null;
         if (v instanceof BigDecimal b) return b;
