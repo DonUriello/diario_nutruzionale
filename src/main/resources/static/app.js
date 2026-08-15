@@ -348,22 +348,64 @@ async function caricaDiario() {
   if (stato.pastoAperto != null) disegnaPopupPasto();
 }
 
+/* Icona per tipo di pasto: colazione / pranzo / cena / spuntino. */
+const TIPI_PASTO = ['colazione', 'pranzo', 'cena', 'spuntino'];
+function tipoIcona(p) {
+  const t = String(p.tipo || '').toLowerCase();
+  return TIPI_PASTO.includes(t) ? t : 'spuntino';
+}
+
+/* Composizione della giornata: quota di kcal da grassi/carbo/proteine.
+   Non è un obiettivo — è la ripartizione sul totale (somma = 100%). */
+function anelloMacro(nome, grammi, colore, pct) {
+  const C = 100.53, dash = (pct / 100 * C).toFixed(1);
+  return `<div class="ma">
+    <svg viewBox="0 0 40 40" aria-hidden="true">
+      <circle cx="20" cy="20" r="16" fill="none" stroke="var(--track)" stroke-width="5"></circle>
+      <circle cx="20" cy="20" r="16" fill="none" stroke="${colore}" stroke-width="5" stroke-linecap="round" stroke-dasharray="${dash} ${C}" transform="rotate(-90 20 20)"></circle>
+    </svg>
+    <b>${nome}</b><span>${fmt(grammi, 'g')} g · ${pct}%</span>
+  </div>`;
+}
+
+function disegnaMacro(totale) {
+  const t = totale || {};
+  const gr = t.grassi ?? 0, ca = t.carbo ?? 0, pr = t.proteine ?? 0;
+  const kGr = gr * 9, kCa = ca * 4, kPr = pr * 4;
+  const somma = kGr + kCa + kPr;
+  const cont = $('macro-anelli');
+
+  if (somma <= 0) { cont.hidden = true; cont.innerHTML = ''; return; }
+
+  const pct = (k) => Math.round(k / somma * 100);
+  cont.innerHTML =
+    anelloMacro('Grassi', gr, 'var(--blu)', pct(kGr)) +
+    anelloMacro('Carbo', ca, 'var(--arancio)', pct(kCa)) +
+    anelloMacro('Proteine', pr, 'var(--rosa)', pct(kPr));
+  cont.hidden = false;
+}
+
 function disegnaDiario() {
   const d = stato.diario;
   $('titolo-giorno').textContent = dataLunga(stato.giorno);
   $('kcal-giorno').textContent = fmt(d.totale?.kcal ?? 0, 'kcal');
+  disegnaMacro(d.totale);
 
   const nVoci = d.pasti.reduce((s, p) => s + p.voci.length, 0);
 
-  const carte = d.pasti.map((p) => `
+  const carte = d.pasti.map((p) => {
+    const ti = tipoIcona(p);
+    return `
     <button class="pasto-card" data-pasto-apri="${p.id}">
       <span class="pc-testa">
+        <span class="pc-icona pc-icona--${ti}"><svg aria-hidden="true"><use href="#ic-${ti}"></use></svg></span>
         <span class="pc-nome">${esc(nomePasto(p))}</span>
         <svg class="pc-freccia" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
       </span>
       <span class="pc-kcal">${fmt(p.totale?.kcal ?? 0, 'kcal')}<em>kcal</em></span>
       <span class="pc-prot">Proteine ${fmt(p.totale?.proteine ?? 0, 'g')} g</span>
-    </button>`).join('');
+    </button>`;
+  }).join('');
 
   $('colonna-diario').innerHTML = `
     <div class="pasti-testa"><span class="eyebrow">Pasti di oggi</span></div>
