@@ -65,13 +65,6 @@
       <p class="eyebrow eyebrow--chiaro" id="etichetta-utente"></p>
       <h1 id="titolo-giorno">Oggi</h1>
     </div>
-    <div class="lcd" aria-live="polite">
-      <div class="lcd-cifre">
-        <span class="lcd-ombra">8888</span>
-        <span class="lcd-vero" id="kcal-giorno">0</span>
-      </div>
-      <span class="lcd-unita">kcal oggi</span>
-    </div>
   </header>
 
   <nav class="barra-giorno">
@@ -80,6 +73,24 @@
     <button id="btn-domani" class="passo" aria-label="Giorno successivo">›</button>
     <button id="btn-esci" class="mini">esci</button>
   </nav>
+
+  <!-- Piatto: totale kcal della giornata al centro -->
+  <div class="piatto-hero">
+    <svg class="posata posata--forchetta" viewBox="0 0 26 150" aria-hidden="true">
+      <path fill="currentColor" d="M6 4v34c0 4 2 6 4 7v97a3 3 0 0 0 6 0V45c2-1 4-3 4-7V4a2 2 0 0 0-4 0v28a1.5 1.5 0 0 1-3 0V4a2 2 0 0 0-4 0v28a1.5 1.5 0 0 1-3 0V4a2 2 0 0 0-4 0z"/>
+    </svg>
+    <div class="piatto">
+      <svg class="piatto-anello" id="piatto-anello" viewBox="0 0 260 260" aria-hidden="true"></svg>
+      <div class="piatto-centro" aria-live="polite">
+        <span class="piatto-unita">KCAL</span>
+        <span class="piatto-num" id="kcal-giorno">0</span>
+        <span class="piatto-nota">oggi</span>
+      </div>
+    </div>
+    <svg class="posata posata--coltello" viewBox="0 0 20 150" aria-hidden="true">
+      <path fill="currentColor" d="M13 4c-5 0-9 6-9 20 0 12 3 18 6 20v103a3 3 0 0 0 6 0V4z"/>
+    </svg>
+  </div>
 
   <main class="corpo">
 
