@@ -91,13 +91,44 @@ input, select { font-family: inherit; }
 
 /* ---------- testata ---------- */
 .testata {
-  max-width: 560px; margin: 0 auto 18px;
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 16px; flex-wrap: wrap;
+  max-width: 560px; margin: 0 auto 12px;
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px;
 }
 .testata h1 {
   margin: 3px 0 0; color: var(--ink);
   font-size: 26px; font-weight: 800; letter-spacing: -.02em; text-transform: capitalize;
+}
+
+/* ---------- piatto (totale kcal del giorno) ---------- */
+.piatto-hero {
+  max-width: 560px; margin: 4px auto 20px; position: relative;
+  display: grid; place-items: center; min-height: 248px;
+}
+.posata {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  color: #dcdbe6; opacity: .9;
+}
+.posata--forchetta { left: 10px; width: 22px; height: 127px; }
+.posata--coltello { right: 12px; width: 18px; height: 135px; }
+.piatto {
+  position: relative; width: 236px; height: 236px; border-radius: 50%;
+  background: radial-gradient(circle at 50% 34%, #ffffff, #f1eff6 78%, #eae8f1 100%);
+  box-shadow:
+    0 24px 46px rgba(72,66,120,.16),
+    0 2px 6px rgba(72,66,120,.08),
+    inset 0 3px 7px rgba(255,255,255,.95),
+    inset 0 -10px 24px rgba(120,116,168,.07);
+  display: grid; place-items: center;
+}
+.piatto-anello { position: absolute; inset: 0; width: 100%; height: 100%; }
+.piatto-centro { position: relative; display: flex; flex-direction: column; align-items: center; line-height: 1; }
+.piatto-unita { font-size: 10.5px; font-weight: 700; letter-spacing: .22em; color: var(--muted); margin-bottom: 8px; }
+.piatto-num { font-size: 52px; font-weight: 800; letter-spacing: -.02em; color: #37363d; font-variant-numeric: tabular-nums; }
+.piatto-nota { margin-top: 8px; font-size: 13px; font-weight: 600; color: var(--accent); }
+@media (max-width: 380px) {
+  .piatto { width: 210px; height: 210px; }
+  .piatto-num { font-size: 46px; }
+  .posata { display: none; }
 }
 
 /* Display kcal — versione pulita del vecchio LCD */

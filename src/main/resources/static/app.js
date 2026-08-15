@@ -669,6 +669,36 @@ $('risultati-off').addEventListener('click', (e) => {
 });
 
 /* ---------------------------------------------------------------
+   Piatto (totale kcal del giorno)
+   --------------------------------------------------------------- */
+/* Anello di trattini attorno al numero. È decorativo — tinte chiare e
+   uniformi, senza arco "pieno": non c'è ancora un obiettivo da rappresentare.
+   Quando arriverà il goal, qui si potrà colorare l'arco fino al valore. */
+function costruisciPiatto() {
+  const svg = $('piatto-anello');
+  if (!svg || svg.childElementCount) return;   // una volta sola
+  const cx = 130, cy = 130, rOut = 106, rIn = 91, N = 54, start = 135, sweep = 270;
+  const A = [201, 197, 226], B = [180, 200, 233];   // lavanda chiaro -> blu chiaro
+  const lerp = (p, q, t) => Math.round(p + (q - p) * t);
+  const ns = 'http://www.w3.org/2000/svg';
+
+  for (let i = 0; i < N; i++) {
+    const t = i / (N - 1);
+    const a = (start + t * sweep) * Math.PI / 180;
+    const cos = Math.cos(a), sin = Math.sin(a);
+    const line = document.createElementNS(ns, 'line');
+    line.setAttribute('x1', (cx + rIn * cos).toFixed(2));
+    line.setAttribute('y1', (cy + rIn * sin).toFixed(2));
+    line.setAttribute('x2', (cx + rOut * cos).toFixed(2));
+    line.setAttribute('y2', (cy + rOut * sin).toFixed(2));
+    line.setAttribute('stroke-width', '3');
+    line.setAttribute('stroke-linecap', 'round');
+    line.setAttribute('stroke', `rgb(${lerp(A[0], B[0], t)},${lerp(A[1], B[1], t)},${lerp(A[2], B[2], t)})`);
+    svg.appendChild(line);
+  }
+}
+
+/* ---------------------------------------------------------------
    Avvio
    --------------------------------------------------------------- */
 async function avvia() {
@@ -678,6 +708,7 @@ async function avvia() {
 
   $('schermata-accesso').hidden = true;
   $('schermata-app').hidden = false;
+  costruisciPiatto();
 
   stato.nutrienti = await api('GET', '/api/nutrienti');
   $('in-data').value = stato.giorno;
