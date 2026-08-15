@@ -372,7 +372,13 @@ input, select { font-family: inherit; }
 }
 .pasto-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
 .pc-testa { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.pc-nome { font-size: 14px; font-weight: 700; letter-spacing: -.01em; }
+.pc-nome { flex: 1; min-width: 0; font-size: 14px; font-weight: 700; letter-spacing: -.01em; }
+.pc-icona { width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center; flex: none; }
+.pc-icona svg { width: 17px; height: 17px; }
+.pc-icona--colazione { background: #fbf0e0; color: #c9822b; }
+.pc-icona--pranzo { background: var(--accent-weak); color: var(--accent); }
+.pc-icona--cena { background: #e7e9f7; color: #5b62c9; }
+.pc-icona--spuntino { background: var(--verde-weak); color: #3f9b6b; }
 .pc-freccia {
   width: 16px; height: 16px; flex: none; fill: none; stroke: var(--faint);
   stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round;
@@ -383,6 +389,20 @@ input, select { font-family: inherit; }
 }
 .pc-kcal em { font-style: normal; font-size: 12px; font-weight: 600; color: var(--muted); margin-left: 4px; }
 .pc-prot { margin-top: 6px; font-size: 12.5px; font-weight: 600; color: var(--rosa); }
+
+/* ---------- anelli macro (composizione della giornata) ---------- */
+.macro-anelli {
+  max-width: 360px; margin: 2px auto 20px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+}
+.ma {
+  background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+  padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  box-shadow: var(--shadow-xs);
+}
+.ma svg { width: 46px; height: 46px; }
+.ma b { font-size: 13px; font-weight: 700; }
+.ma span { font-size: 12px; color: var(--ink-soft); font-weight: 600; }
 
 /* ---------- iconcine dei nutrienti ---------- */
 .n-ic { width: 17px; height: 17px; flex: none; }
